@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>がくしゅうポイント帳</title>
+<style>
+  :root{
+    --paper:#FBF6EC;
+    --ink:#2E2A22;
+    --ink-soft:#6B6354;
+    --line:#DDD3BC;
+    --accent:#C9622B;   /* 朱色っぽいスタンプカラー */
+    --accent-soft:#F0D9C4;
+    --good:#3E7A57;
+    --good-soft:#DCEEE2;
+    --card:#FFFDF8;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Hiragino Sans","Yu Gothic","Helvetica Neue",Arial,sans-serif;
+    line-height:1.6;
+  }
+  .wrap{
+    max-width:760px;
+    margin:0 auto;
+    padding:24px 18px 80px;
+  }
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    border-bottom:3px solid var(--ink);
+    padding-bottom:14px;
+    margin-bottom:20px;
+  }
+  header h1{
+    font-family:"Hiragino Mincho ProN","Yu Mincho",serif;
+    font-size:1.6rem;
+    letter-spacing:.04em;
+    margin:0;
+  }
+  #status{
+    font-size:.78rem;
+    color:var(--ink-soft);
+  }
+  #status.error{ color:#B3261E; font-weight:bold; }
+
+  .tabs{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-bottom:18px;
+  }
+  .tab-btn{
+    border:2px solid var(--ink);
+    background:var(--card);
+    border-radius:999px;
+    padding:6px 16px;
+    font-size:.9rem;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  .tab-btn.active{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+    font-weight:bold;
+  }
+  .tab-btn.add-child{
+    border-style:dashed;
+    color:var(--ink-soft);
+  }
+
+  .panel{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px;
+    margin-bottom:18px;
+  }
+
+  .total-stamp{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin-bottom:6px;
+  }
+  .stamp-circle{
+    width:64px;height:64px;
+    border-radius:50%;
+    border:3px solid var(--accent);
+    color:var(--accent);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    font-weight:bold;
+    transform:rotate(-6deg);
+    flex-shrink:0;
+  }
+  .stamp-circle .num{font-size:1.3rem;line-height:1;}
+  .stamp-circle .lbl{font-size:.6rem;}
+  .total-text .name{font-size:1.1rem;font-weight:bold;}
+  .total-text .sub{font-size:.8rem;color:var(--ink-soft);}
+
+  form.entry-form{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-top:14px;
+  }
+  form.entry-form .full{grid-column:1/-1;}
+  form.entry-form label{
+    font-size:.78rem;
+    color:var(--ink-soft);
+    display:block;
+    margin-bottom:3px;
+  }
+  input,select,textarea{
+    width:100%;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:.92rem;
+    background:#fff;
+    color:var(--ink);
+    font-family:inherit;
+  }
+  textarea{resize:vertical;min-height:42px;}
+
+  .btn{
+    border:none;
+    border-radius:8px;
+    padding:9px 18px;
+    font-size:.9rem;
+    cursor:pointer;
+    font-weight:bold;
+  }
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:#a94f20;}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
+  .btn-danger{background:transparent;color:#B3261E;border:1px solid #B3261E;}
+  .btn-row{display:flex;gap:8px;margin-top:4px;}
+
+  .entry-list{margin-top:18px;}
+  .entry-list h3{font-size:.95rem;color:var(--ink-soft);margin:0 0 10px;}
+  .entry{
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+    border-top:1px solid var(--line);
+    padding:12px 0;
+  }
+  .entry:first-child{border-top:none;}
+  .entry .pts{
+    flex-shrink:0;
+    min-width:48px;
+    text-align:center;
+    font-weight:bold;
+    color:var(--good);
+    background:var(--good-soft);
+    border-radius:8px;
+    padding:4px 0;
+    font-size:.9rem;
+  }
+  .entry .pts.neg{color:#B3261E;background:#F7DEDC;}
+  .entry .meta{flex:1;}
+  .entry .date{font-size:.75rem;color:var(--ink-soft);}
+  .entry .reason{font-size:.95rem;margin:2px 0;}
+  .entry .cat{
+    display:inline-block;
+    font-size:.7rem;
+    color:var(--ink-soft);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:1px 6px;
+    margin-top:2px;
+  }
+  .entry .actions{display:flex;gap:6px;flex-shrink:0;}
+  .entry .actions button{
+    border:none;background:none;cursor:pointer;
+    font-size:.78rem;color:var(--ink-soft);
+    text-decoration:underline;
+    padding:2px;
+  }
+  .empty{color:var(--ink-soft);font-size:.9rem;padding:14px 0;text-align:center;}
+
+  dialog{
+    border:none;
+    border-radius:var(--radius);
+    padding:20px;
+    max-width:420px;
+    width:90%;
+    border:1px solid var(--line);
+  }
+  dialog::backdrop{background:rgba(46,42,34,.4);}
+  dialog h3{margin-top:0;}
+
+  footer{
+    text-align:center;
+    font-size:.72rem;
+    color:var(--ink-soft);
+    margin-top:30px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>がくしゅうポイント帳</h1>
+    <div id="status">読み込み中…</div>
+  </header>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div id="content"></div>
+
+  <footer>data.json をこのリポジトリで管理しています。</footer>
+</div>
+
+<dialog id="childDialog">
+  <h3>お子さんを追加</h3>
+  <label>名前
+    <input type="text" id="newChildName" placeholder="例：はなこ">
+  </label>
+  <div class="btn-row" style="margin-top:14px;">
+    <button class="btn btn-primary" id="confirmAddChild">追加する</button>
+    <button class="btn btn-ghost" id="cancelAddChild">キャンセル</button>
+  </div>
+</dialog>
+
+<script>
+/* ====================================================================
+ * ここに自分専用の Personal Access Token（fine-grained）を入れてください。
+ * 例: const GITHUB_TOKEN = "github_pat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+ *
+ * ★ 注意 ★
+ * このファイルは Public リポジトリに置かれ、誰でも閲覧できます。
+ * トークンは「対象リポジトリ（このリポジトリのみ）・Contents: Read and write」
+ * のみに権限を絞った fine-grained PAT を使ってください。
+ * それでも他人に知られればこのリポジトリへの書き込みが可能になるため、
+ * 公開後はブラウザのブックマークやローカルファイルとして開くなど、
+ * URLを家族以外に共有しないことを推奨します。
+ * ==================================================================== */
+const GITHUB_TOKEN = "ここにPersonal Access Tokenを貼り付ける";
+
+// ↓ 自分のリポジトリ情報に合わせて変更してください
+const GITHUB_OWNER  = "your-github-username";
+const GITHUB_REPO   = "learning-points";
+const GITHUB_BRANCH = "main";
+const DATA_PATH      = "data.json";
+
+const API_BASE = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${DATA_PATH}`;
+
+let state = { children: [], entries: [] };
+let currentSha = null;
+let activeChildId = null;
+let editingEntryId = null;
+
+const statusEl = document.getElementById("status");
+const tabsEl = document.getElementById("tabs");
+const contentEl = document.getElementById("content");
+
+function setStatus(text, isError=false){
+  statusEl.textContent = text;
+  statusEl.className = isError ? "error" : "";
+}
+
+function uid(){
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+
+/* ---------- GitHub API ---------- */
+
+async function loadData(){
+  setStatus("読み込み中…");
+  try{
+    const res = await fetch(`${API_BASE}?ref=${GITHUB_BRANCH}`, {
+      headers: {
+        "Authorization": `Bearer ${GITHUB_TOKEN}`,
+        "Accept": "application/vnd.github+json"
+      }
+    });
+    if(res.status === 404){
+      // data.json がまだ存在しない場合は空データで開始
+      state = { children: [], entries: [] };
+      currentSha = null;
+      setStatus("data.json が見つかりません（初回はOK。新規作成されます）");
+      render();
+      return;
+    }
+    if(!res.ok) throw new Error(`GitHub APIエラー: ${res.status}`);
+    const json = await res.json();
+    currentSha = json.sha;
+    const decoded = decodeURIComponent(escape(atob(json.content.replace(/\n/g, ""))));
+    state = JSON.parse(decoded || '{"children":[],"entries":[]}');
+    if(!state.children) state.children = [];
+    if(!state.entries) state.entries = [];
+    setStatus("読み込み完了 ✓");
+    if(!activeChildId && state.children.length){
+      activeChildId = state.children[0].id;
+    }
+    render();
+  }catch(err){
+    console.error(err);
+    setStatus("読み込みエラー：" + err.message, true);
+  }
+}
+
+async function saveData(){
+  setStatus("保存中…");
+  try{
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(state, null, 2))));
+    const body = {
+      message: `update data.json (${new Date().toISOString()})`,
+      content: content,
+      branch: GITHUB_BRANCH
+    };
+    if(currentSha) body.sha = currentSha;
+
+    const res = await fetch(API_BASE, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${GITHUB_TOKEN}`,
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+    if(!res.ok){
+      const errJson = await res.json().catch(()=>({}));
+      throw new Error(`GitHub APIエラー: ${res.status} ${errJson.message || ""}`);
+    }
+    const json = await res.json();
+    currentSha = json.content.sha;
+    setStatus("保存しました ✓");
+  }catch(err){
+    console.error(err);
+    setStatus("保存エラー：" + err.message, true);
+    alert("保存に失敗しました。トークンや権限設定をご確認ください。\n" + err.message);
+  }
+}
+
+/* ---------- レンダリング ---------- */
+
+function render(){
+  renderTabs();
+  renderContent();
+}
+
+function renderTabs(){
+  tabsEl.innerHTML = "";
+  state.children.forEach(child => {
+    const btn = document.createElement("button");
+    btn.className = "tab-btn" + (child.id === activeChildId ? " active" : "");
+    btn.textContent = child.name;
+    btn.onclick = () => { activeChildId = child.id; render(); };
+    tabsEl.appendChild(btn);
+  });
+  const addBtn = document.createElement("button");
+  addBtn.className = "tab-btn add-child";
+  addBtn.textContent = "＋ 追加";
+  addBtn.onclick = openAddChildDialog;
+  tabsEl.appendChild(addBtn);
+}
+
+function renderContent(){
+  contentEl.innerHTML = "";
+  if(!state.children.length){
+    contentEl.innerHTML = `<div class="panel"><p class="empty">まだお子さんが登録されていません。「＋ 追加」から登録してください。</p></div>`;
+    return;
+  }
+  const child = state.children.find(c => c.id === activeChildId) || state.children[0];
+  activeChildId = child.id;
+
+  const childEntries = state.entries
+    .filter(e => e.childId === child.id)
+    .sort((a,b) => b.date.localeCompare(a.date));
+
+  const total = childEntries.reduce((sum,e) => sum + Number(e.points), 0);
+
+  const panel = document.createElement("div");
+  panel.className = "panel";
+
+  panel.innerHTML = `
+    <div class="total-stamp">
+      <div class="stamp-circle"><span class="num">${total}</span><span class="lbl">pt</span></div>
+      <div class="total-text">
+        <div class="name">${escapeHtml(child.name)}さんの合計ポイント</div>
+        <div class="sub">記録数：${childEntries.length}件</div>
+      </div>
+    </div>
+    <button class="btn btn-ghost" id="deleteChildBtn" style="margin-top:6px;">この子のデータを削除</button>
+
+    <form class="entry-form" id="entryForm">
+      <div>
+        <label>日付</label>
+        <input type="date" id="entryDate" required value="${todayStr()}">
+      </div>
+      <div>
+        <label>ポイント（マイナスも可）</label>
+        <input type="number" id="entryPoints" required value="1" step="1">
+      </div>
+      <div class="full">
+        <label>カテゴリ</label>
+        <input type="text" id="entryCategory" placeholder="例：算数 / 読書 / お手伝い">
+      </div>
+      <div class="full">
+        <label>内容</label>
+        <textarea id="entryReason" placeholder="何をしたか書いてください" required></textarea>
+      </div>
+      <div class="full btn-row">
+        <button type="submit" class="btn btn-primary" id="entrySubmitBtn">記録する</button>
+        <button type="button" class="btn btn-ghost" id="entryCancelBtn" style="display:none;">編集を取消</button>
+      </div>
+    </form>
+
+    <div class="entry-list">
+      <h3>記録一覧</h3>
+      <div id="entryListBody"></div>
+    </div>
+  `;
+  contentEl.appendChild(panel);
+
+  document.getElementById("deleteChildBtn").onclick = () => deleteChild(child.id);
+  document.getElementById("entryForm").onsubmit = (e) => submitEntry(e, child.id);
+  document.getElementById("entryCancelBtn").onclick = cancelEditEntry;
+
+  const listBody = document.getElementById("entryListBody");
+  if(!childEntries.length){
+    listBody.innerHTML = `<p class="empty">まだ記録がありません。</p>`;
+  }else{
+    childEntries.forEach(entry => {
+      const row = document.createElement("div");
+      row.className = "entry";
+      const pts = Number(entry.points);
+      row.innerHTML = `
+        <div class="pts ${pts < 0 ? "neg" : ""}">${pts > 0 ? "+" : ""}${pts}</div>
+        <div class="meta">
+          <div class="date">${entry.date}</div>
+          <div class="reason">${escapeHtml(entry.reason)}</div>
+          ${entry.category ? `<span class="cat">${escapeHtml(entry.category)}</span>` : ""}
+        </div>
+        <div class="actions">
+          <button data-act="edit">編集</button>
+          <button data-act="del">削除</button>
+        </div>
+      `;
+      row.querySelector('[data-act="edit"]').onclick = () => startEditEntry(entry);
+      row.querySelector('[data-act="del"]').onclick = () => deleteEntry(entry.id);
+      listBody.appendChild(row);
+    });
+  }
+
+  if(editingEntryId){
+    const entry = state.entries.find(e => e.id === editingEntryId);
+    if(entry){
+      document.getElementById("entryDate").value = entry.date;
+      document.getElementById("entryPoints").value = entry.points;
+      document.getElementById("entryCategory").value = entry.category || "";
+      document.getElementById("entryReason").value = entry.reason;
+      document.getElementById("entrySubmitBtn").textContent = "更新する";
+      document.getElementById("entryCancelBtn").style.display = "inline-block";
+    }
+  }
+}
+
+function todayStr(){
+  return new Date().toISOString().slice(0,10);
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+
+/* ---------- 操作 ---------- */
+
+function openAddChildDialog(){
+  const dialog = document.getElementById("childDialog");
+  document.getElementById("newChildName").value = "";
+  dialog.showModal();
+}
+document.getElementById("confirmAddChild").onclick = async () => {
+  const name = document.getElementById("newChildName").value.trim();
+  if(!name) return;
+  const child = { id: uid(), name };
+  state.children.push(child);
+  activeChildId = child.id;
+  document.getElementById("childDialog").close();
+  render();
+  await saveData();
+};
+document.getElementById("cancelAddChild").onclick = () => {
+  document.getElementById("childDialog").close();
+};
+
+async function deleteChild(childId){
+  const child = state.children.find(c => c.id === childId);
+  if(!confirm(`${child.name}さんのデータ（記録もすべて）を削除します。よろしいですか？`)) return;
+  state.children = state.children.filter(c => c.id !== childId);
+  state.entries = state.entries.filter(e => e.childId !== childId);
+  activeChildId = state.children.length ? state.children[0].id : null;
+  render();
+  await saveData();
+}
+
+async function submitEntry(e, childId){
+  e.preventDefault();
+  const date = document.getElementById("entryDate").value;
+  const points = document.getElementById("entryPoints").value;
+  const category = document.getElementById("entryCategory").value.trim();
+  const reason = document.getElementById("entryReason").value.trim();
+  if(!date || points === "" || !reason) return;
+
+  if(editingEntryId){
+    const entry = state.entries.find(en => en.id === editingEntryId);
+    entry.date = date;
+    entry.points = Number(points);
+    entry.category = category;
+    entry.reason = reason;
+    editingEntryId = null;
+  }else{
+    state.entries.push({
+      id: uid(),
+      childId,
+      date,
+      points: Number(points),
+      category,
+      reason
+    });
+  }
+  render();
+  await saveData();
+}
+
+function startEditEntry(entry){
+  editingEntryId = entry.id;
+  render();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function cancelEditEntry(){
+  editingEntryId = null;
+  render();
+}
+
+async function deleteEntry(entryId){
+  if(!confirm("この記録を削除しますか？")) return;
+  state.entries = state.entries.filter(e => e.id !== entryId);
+  render();
+  await saveData();
+}
+
+/* ---------- 起動 ---------- */
+loadData();
+</script>
+</body>
+</html>
